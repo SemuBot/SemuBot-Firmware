@@ -132,10 +132,17 @@ void calculate_motor_duty_cycles(float linear_x, float linear_y, float omega, mo
     motor_update(motor1);
     motor_update(motor2);
     motor_update(motor3);
+    char motor_calc_debug_msg[128];
+    snprintf(motor_calc_debug_msg, sizeof(motor_calc_debug_msg),
+             "M1_DC: %.2f, M2_DC: %.2f, M3_DC: %.2f\n",
+             motor1->duty_cycle, motor2->duty_cycle, motor3->duty_cycle);
+    CDC_Transmit_FS((uint8_t *)motor_calc_debug_msg, strlen(motor_calc_debug_msg));
 }
 
 
 void motor_enable(motor_st *motor_data){
+    HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(nBRAKE_GPIO_Port, nBRAKE_Pin, GPIO_PIN_SET);
     HAL_TIM_PWM_Start(motor_data->pwm_timer, TIM_CHANNEL_1);
 }
 

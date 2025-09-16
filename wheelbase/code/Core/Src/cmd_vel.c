@@ -66,7 +66,7 @@ void Process_CmdVel(CmdVel *cmd_vel) {
         cmd_vel->angular_z
     );
 
-    CDC_Transmit_FS((uint8_t *)debug_msg, strlen(debug_msg));
+    //CDC_Transmit_FS((uint8_t *)debug_msg, strlen(debug_msg));
 
 
     extern motor_st motor1, motor2, motor3;

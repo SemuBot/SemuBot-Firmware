@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cmd_vel.h"
+#include "motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +38,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 CmdVel cmd_vel_data;
+extern motor_st motor1, motor2, motor3;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -97,7 +99,11 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-
+  motor_init(&motor1);
+  motor_init(&motor2);
+  motor_init(&motor3);
+  HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, GPIO_PIN_RESET);   // Set Enable pin HIGH
+  HAL_GPIO_WritePin(nBRAKE_GPIO_Port, nBRAKE_Pin, GPIO_PIN_SET);   // Set nBRAKE pin HIGH to release the brake
   /* USER CODE END 2 */
 
   /* Infinite loop */
