@@ -113,7 +113,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
 	  /*
 	  if (CDC_Transmit_FS((uint8_t*)"USB Connected\n", 14) == USBD_OK) {
 	      HAL_GPIO_TogglePin(debug_GPIO_Port, debug_Pin);

@@ -48,5 +48,11 @@ void motor_disable(motor_st *motor_handler);
 void motor_setDutyCycleLimit(motor_st *motor_handler, uint8_t limit);
 void calculate_motor_duty_cycles(float linear_x, float linear_y, float omega, motor_st *motor1, motor_st *motor2, motor_st *motor3);
 
+
+
+
+
+
+
 #endif /* INC_MOTOR_H_ */
 
