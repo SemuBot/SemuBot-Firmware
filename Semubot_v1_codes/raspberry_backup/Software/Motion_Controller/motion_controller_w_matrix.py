@@ -4,13 +4,11 @@ import pygame
 import numpy as np
 import time
 from pygame.math import Vector2
+from servocontroller import ServoController as sc
 
 
 def map_range(value, in_min, in_max, out_min, out_max):
     return np.interp(value, [in_min, in_max], [out_min, out_max])
-
-
-
 
 def main():
     os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -33,17 +31,11 @@ def main():
     PWM_PIN3 = 19
     BUTTON_PIN = 4
     DUTY_CYCLE = 0  
-    SERVO_PIN1 = 17
-    SERVO_PIN2 = 22
-    SERVO_PIN3 = 24
-    SERVO_PIN4 = 25
-    freq = 50
     
-    GPIO.setup([SERVO_PIN1, SERVO_PIN2, SERVO_PIN3, SERVO_PIN4], GPIO.OUT)
-    servo1 = GPIO.PWM(SERVO_PIN1, freq) 
-    servo2 = GPIO.PWM(SERVO_PIN2, freq)
-    servo3 = GPIO.PWM(SERVO_PIN3, freq)
-    servo4 = GPIO.PWM(SERVO_PIN4, freq)
+    servo = sc()
+    servo.open()
+    servo.timer = 50  # 50ms timer interval
+    servo_movement_step = 15
 
     GPIO.setup(PWM_PIN1, GPIO.OUT)
     GPIO.setup(PWM_PIN2, GPIO.OUT)
@@ -58,11 +50,6 @@ def main():
 
     pwm3 = GPIO.PWM(PWM_PIN3, 1000)  
     pwm3.start(DUTY_CYCLE)
-    servo1.start(3)  # Neutral position ???
-    servo2.start(3)
-    servo3.start(3)
-    servo4.start(3)
-
 
     GPIO.setup(CHNAGE_DIR_PIN1, GPIO.OUT)
     GPIO.setup(CHNAGE_DIR_PIN2, GPIO.OUT)
@@ -75,10 +62,8 @@ def main():
     matrix = np.array([[-0.33, 0.58, 0.33],
                     [-0.33, -0.58, 0.33],
                     [0.67, 0, 0.33]])
-    last_servo_time = None
-    servo_duration = 0.5  
+    
     try:
-
 
         while True:
 
@@ -90,7 +75,6 @@ def main():
                             return
                 if lb_value:
     
-
                     lt_value = joystick.get_axis(5)
                     rt_value = joystick.get_axis(4)
                     right_joystick_y = -(joystick.get_axis(2))  # Assuming Y-axis is inverted
@@ -198,53 +182,49 @@ def main():
                         pwm3.ChangeDutyCycle(0)
                 elif rb_value:
                     print("RBBB")
-                    left_x = joystick.get_axis(0)
-                    left_y = joystick.get_axis(1)
-                    right_x = joystick.get_axis(2)
-                    right_y = joystick.get_axis(3)
-                    #print("Left_x: ",left_x)
-                    #print("Left_y: ",left_y)
-                    #print("Right_x: ",right_x)
-                    #print("Right_y: ",right_y)
-                    dead_zone = 0.3  
-                    left_x = joystick.get_axis(0) if abs(joystick.get_axis(0)) > dead_zone else 0
-                    left_y = joystick.get_axis(1) if abs(joystick.get_axis(1)) > dead_zone else 0
-                    right_x = joystick.get_axis(2) if abs(joystick.get_axis(2)) > dead_zone else 0
-                    right_y = joystick.get_axis(3) if abs(joystick.get_axis(3)) > dead_zone else 0
-                    min_val = 2
-                    max_val = 12
-                    servo1_angle = map_range(left_x, -1, 1, min_val, max_val)
-                    servo2_angle = map_range(left_y, -1, 1, min_val, max_val)
-                    servo3_angle = map_range(right_x,-1, 1,min_val, max_val)
-                    servo4_angle = map_range(right_y, -1, 1, min_val, max_val)
-                    print("Servo1: ",servo1_angle)
-                    print("Servo2: ",servo2_angle)
-                    last_servo_time = time.time()
-                    servo1.ChangeDutyCycle(servo1_angle)
-                    servo2.ChangeDutyCycle(servo2_angle)
-                    servo3.ChangeDutyCycle(servo3_angle)
-                    servo4.ChangeDutyCycle(servo4_angle)
+                    dead_zone = 0.2 
+                    shoulder_servo = joystick.get_axis(0)
+                    upper_arm_servo = joystick.get_axis(1)
+                    upper_elbow_servo = joystick.get_axis(2)
+                    lower_elbow_servo = joystick.get_axis(3)   
 
-                    while time.time() - last_servo_time > servo_duration:
-                        servo1.ChangeDutyCycle(0)
-                        servo2.ChangeDutyCycle(0)
-                        servo3.ChangeDutyCycle(0)
-                        servo4.ChangeDutyCycle(0)
+                    if abs(shoulder_servo) > dead_zone:
+                        servo.move_servo_realtime(1, -int(shoulder_servo * servo_movement_step))
+                        
+                    if abs(upper_arm_servo) > dead_zone:
+                        servo.move_servo_realtime(2, -int(upper_arm_servo * servo_movement_step))
+                        
+                    if abs(upper_elbow_servo) > dead_zone:
+                        servo.move_servo_realtime(3, -int(upper_elbow_servo * servo_movement_step))
+                        
+                    if abs(lower_elbow_servo) > dead_zone:
+                        servo.move_servo_realtime(4, -int(lower_elbow_servo * servo_movement_step))
+
+                    if joystick.get_button(4):  # should be LB
+                        servo.move_servo_realtime(5, servo_movement_step)
+                    if joystick.get_button(5):  # should be RB
+                        servo.move_servo_realtime(5, -servo_movement_step)
+                    
+                    if joystick.get_button(0):  # A button
+                        servo.reset_to_neutral(movement_time=500)
+                        print("All servos reset to neutral position")
+
                 else:
 
                     pwm1.ChangeDutyCycle(0)
                     pwm2.ChangeDutyCycle(0)
                     pwm3.ChangeDutyCycle(0)
-                    servo1.ChangeDutyCycle(0)
-                    servo2.ChangeDutyCycle(0)
-                    servo3.ChangeDutyCycle(0)
-                    servo4.ChangeDutyCycle(0)
+                    # servo1.ChangeDutyCycle(0)
+                    # servo2.ChangeDutyCycle(0)
+                    # servo3.ChangeDutyCycle(0)
+                    # servo4.ChangeDutyCycle(0)
             print("Stop button is pressed...")
 
     except KeyboardInterrupt:
         print("Exiting...")
     finally:
         pygame.quit()
+        servo.close()
         pwm1.stop()
         pwm2.stop()
         pwm3.stop()
