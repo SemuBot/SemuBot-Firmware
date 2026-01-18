@@ -20,6 +20,21 @@ logger = logging.getLogger(__name__)
 def map_range(value, in_min, in_max, out_min, out_max):
     return np.interp(value, [in_min, in_max], [out_min, out_max])
 
+def wait_for_joystick(target_index=1):
+    js = None
+    while js is None:
+        for event in pygame.event.get():
+            if event.type == pygame.JOYDEVICEADDED:
+                j = pygame.joystick.Joystick(event.device_index)
+                j.init()
+                print("Detected:", j.get_name(), "index:", event.device_index)
+                if event.device_index == target_index:
+                    js = j
+                    print("Using joystick", target_index)
+        time.sleep(0.1)
+    return js
+
+
 def main():
     os.environ["SDL_VIDEODRIVER"] = "dummy"
 
@@ -28,19 +43,8 @@ def main():
     joystick = None
     TARGET_INDEX = 1
 
-    while joystick is None:
-        for event in pygame.event.get():
-            if event.type == pygame.JOYDEVICEADDED:
-                print(f"Joystick added: {event.device_index}")
-                try:
-                    js = pygame.joystick.Joystick(event.device_index)
-                    js.init()
-                    if event.device_index == TARGET_INDEX:
-                        joystick = js
-                        print(f"Using joystick {TARGET_INDEX}: {joystick.get_name()}")
-                except pygame.error as e:
-                    print(f"Failed to init joystick: {e}")
-        time.sleep(0.1)
+    joystick = wait_for_joystick(1)
+
     #joystick = pygame.joystick.Joystick(1) # 0 = genesis, 1 = XBOX
     joystick.init()
     JOYSTICK_THRESHOLD = 0.99
@@ -61,7 +65,6 @@ def main():
     GPIO.setup(PWM_PIN1, GPIO.OUT)
     GPIO.setup(PWM_PIN2, GPIO.OUT)
     GPIO.setup(PWM_PIN3, GPIO.OUT)
-    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     pwm1 = GPIO.PWM(PWM_PIN1, 1000)  
     pwm1.start(DUTY_CYCLE)
@@ -87,11 +90,31 @@ def main():
 
 
         while True:
+            
             for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        return
-                    
-                    
+                if event.type == pygame.QUIT:
+                    return
+
+                elif event.type == pygame.JOYDEVICEREMOVED:
+                    print("Joystick disconnected")
+                    joystick = None
+
+                elif event.type == pygame.JOYDEVICEADDED:
+                    print("Joystick reconnected:", event.device_index)
+                    try:
+                        js = pygame.joystick.Joystick(event.device_index)
+                        js.init()
+                        joystick = js
+                        print("Reinitialized joystick:", js.get_name())
+                    except pygame.error as e:
+                        print("Failed to reinit:", e)
+            if joystick is None:
+                pwm1.ChangeDutyCycle(0)
+                pwm2.ChangeDutyCycle(0)
+                pwm3.ChangeDutyCycle(0)
+                time.sleep(0.05)
+                continue
+            
             lb_value = joystick.get_button(6)
             rb_value = joystick.get_button(7)
             num_buttons = joystick.get_numbuttons()
